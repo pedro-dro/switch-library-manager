@@ -3,15 +3,16 @@ package db
 import (
 	"errors"
 	"fmt"
-	"github.com/giwty/switch-library-manager/fileio"
-	"github.com/giwty/switch-library-manager/settings"
-	"github.com/giwty/switch-library-manager/switchfs"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/giwty/switch-library-manager/fileio"
+	"github.com/giwty/switch-library-manager/settings"
+	"github.com/giwty/switch-library-manager/switchfs"
+	"go.uber.org/zap"
 )
 
 var (
@@ -24,6 +25,8 @@ const (
 	DB_TABLE_LOCAL_LIBRARY      = "local-library"
 
 	REASON_UNSUPPORTED_TYPE = iota
+	REASON_BLACKLIST
+	REASON_DEMO
 	REASON_DUPLICATE
 	REASON_OLD_UPDATE
 	REASON_UNRECOGNISED
@@ -208,7 +211,13 @@ func (ldb *LocalSwitchDBManager) processLocalFiles(files []ExtendedFileInfo,
 
 		for _, metadata := range contentMap {
 
-			idPrefix := metadata.TitleId[0 : len(metadata.TitleId)-4]
+			id := metadata.TitleId
+			idPrefix := id[0 : len(id)-3]
+			if !(strings.HasSuffix(id, "000") || strings.HasSuffix(id, "800")) {
+				intVar, _ := strconv.ParseUint(id[len(id)-4:len(id)-3], 16, 64)
+				h := fmt.Sprintf("%x", intVar-1)
+				idPrefix = id[0:len(id)-4] + h
+			}
 
 			multiContent := len(contentMap) > 1
 			switchTitle := &SwitchGameFiles{
@@ -248,6 +257,12 @@ func (ldb *LocalSwitchDBManager) processLocalFiles(files []ExtendedFileInfo,
 			//process base
 			if strings.HasSuffix(metadata.TitleId, "000") {
 				metadata.Type = "Base"
+				if _, ok := BlacklistTitles[strings.ToUpper(metadata.TitleId)]; ok {
+					skipped[file] = SkippedFile{ReasonCode: REASON_BLACKLIST, ReasonText: "blacklisted title"}
+				}
+				if _, ok := DemoTitles[strings.ToUpper(metadata.TitleId)]; ok {
+					skipped[file] = SkippedFile{ReasonCode: REASON_DEMO, ReasonText: "demo title"}
+				}
 				if switchTitle.BaseExist {
 					skipped[file] = SkippedFile{ReasonCode: REASON_DUPLICATE, ReasonText: "duplicate base file (" + switchTitle.File.ExtendedInfo.FileName + ")"}
 					zap.S().Warnf("-->Duplicate base file found [%v] and [%v]", file.FileName, switchTitle.File.ExtendedInfo.FileName)

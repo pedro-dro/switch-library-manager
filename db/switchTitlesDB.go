@@ -2,8 +2,13 @@ package db
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"os"
+	"strconv"
 	"strings"
+
+	"github.com/giwty/switch-library-manager/settings"
 )
 
 type TitleAttributes struct {
@@ -18,6 +23,14 @@ type TitleAttributes struct {
 	BannerUrl   string      `json:"bannerUrl,omitempty"`
 	Description string      `json:"description,omitempty"`
 	Size        int         `json:"size,omitempty"`
+	IsDemo      bool        `json:"isDemo,omitempty"`
+}
+
+type BlacklistTitleAttributes struct {
+	Id     string `json:"ID"`
+	Name   string `json:"Name,omitempty"`
+	Region string `json:"Region,omitempty"`
+	Reason string `json:"Reason,omitempty"`
 }
 
 type SwitchTitle struct {
@@ -30,12 +43,38 @@ type SwitchTitlesDB struct {
 	TitlesMap map[string]*SwitchTitle
 }
 
+var DemoTitles = make(map[string]TitleAttributes)
+var BlacklistTitles = make(map[string]BlacklistTitleAttributes)
+
 func CreateSwitchTitleDB(titlesFile, versionsFile io.Reader) (*SwitchTitlesDB, error) {
+	baseFolder, err := os.Getwd()
+
 	//parse the titles objects
 	var titles = map[string]TitleAttributes{}
-	err := decodeToJsonObject(titlesFile, &titles)
+	err = decodeToJsonObject(titlesFile, &titles)
 	if err != nil {
 		return nil, err
+	}
+
+	//parse the blacklist objects
+	var BlacklistTitlesFile *os.File = nil
+	if _, err := os.Stat("blacklist.json"); err == nil {
+		BlacklistTitlesFile, err = os.Open("blacklist.json")
+		err = decodeToJsonObject(BlacklistTitlesFile, &BlacklistTitles)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	//parse the whitelist objects
+	var WhitelistTitles = map[string]TitleAttributes{}
+	var WhitelistTitlesFile *os.File = nil
+	if _, err := os.Stat("whitelist.json"); err == nil {
+		WhitelistTitlesFile, err = os.Open("whitelist.json")
+		err = decodeToJsonObject(WhitelistTitlesFile, &WhitelistTitles)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	//parse the titles objects
@@ -48,14 +87,30 @@ func CreateSwitchTitleDB(titlesFile, versionsFile io.Reader) (*SwitchTitlesDB, e
 
 	result := SwitchTitlesDB{TitlesMap: map[string]*SwitchTitle{}}
 	for id, attr := range titles {
+		if titles[id].IsDemo && settings.ReadSettings(baseFolder).IgnoreDemos {
+			DemoTitles[id] = attr
+			continue
+		}
+
+		if _, ok := BlacklistTitles[id]; ok {
+			continue
+		}
+
 		id = strings.ToLower(id)
 
 		//TitleAttributes id rules:
 		//main TitleAttributes ends with 000
 		//Updates ends with 800
-		//Dlc have a running counter (starting with 001) in the 4 last chars
-		idPrefix := id[0 : len(id)-4]
+		//Dlc adds 1 to 4th char starting from the right (always odd) and
+		//    have a running counter (starting with 001) in the 3 last chars
 		switchTitle := &SwitchTitle{Dlc: map[string]TitleAttributes{}}
+		idPrefix := id[0 : len(id)-3]
+		if !(strings.HasSuffix(id, "000") || strings.HasSuffix(id, "800")) {
+			intVar, _ := strconv.ParseUint(id[len(id)-4:len(id)-3], 16, 64)
+			h := fmt.Sprintf("%x", intVar-1)
+			idPrefix = id[0:len(id)-4] + h
+		}
+
 		if t, ok := result.TitlesMap[idPrefix]; ok {
 			switchTitle = t
 		}
@@ -77,6 +132,19 @@ func CreateSwitchTitleDB(titlesFile, versionsFile io.Reader) (*SwitchTitlesDB, e
 		//not an update, and not main TitleAttributes, so treat it as a DLC
 		switchTitle.Dlc[id] = attr
 
+	}
+
+	for WhitelistId, WhitelistAttr := range WhitelistTitles {
+		WhitelistId = strings.ToLower(WhitelistId)
+		WhitelistIdPrefix := WhitelistId[0 : len(WhitelistId)-3]
+		WhitelistSwitchTitle := &SwitchTitle{Dlc: map[string]TitleAttributes{}}
+
+		if _, ok := result.TitlesMap[WhitelistIdPrefix]; ok {
+			WhitelistSwitchTitle.Updates = result.TitlesMap[WhitelistIdPrefix].Updates
+			WhitelistSwitchTitle.Dlc = result.TitlesMap[WhitelistIdPrefix].Dlc
+		}
+		WhitelistSwitchTitle.Attributes = WhitelistAttr
+		result.TitlesMap[WhitelistIdPrefix] = WhitelistSwitchTitle
 	}
 
 	return &result, nil
