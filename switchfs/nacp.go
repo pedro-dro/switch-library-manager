@@ -11,6 +11,7 @@ type Language int
 const (
 	AmericanEnglish = iota
 	BritishEnglish
+	Default
 	Japanese
 	French
 	German
@@ -42,6 +43,7 @@ func (l Language) String() string {
 	return [...]string{
 		"AmericanEnglish",
 		"BritishEnglish",
+		"Default",
 		"Japanese",
 		"French",
 		"German",
@@ -103,6 +105,9 @@ func readNacp(data []byte, romFsHeader RomfsHeader, fileEntry RomfsFileEntry) (N
 		appTitleBytes := data[offset+(uint64(i)*0x300) : offset+(uint64(i)*0x300)+0x200]
 		nameBytes := readBytesUntilZero(appTitleBytes)
 		titles[Language(i).String()] = NacpTitle{Language: Language(i), Title: string(nameBytes)}
+		if i == 0 {
+			titles["Default"] = NacpTitle{Language: Language(i), Title: string(nameBytes)}
+		}
 	}
 
 	isbn := readBytesUntilZero(data[offset+0x3000 : offset+0x3000+0x25])
