@@ -3,12 +3,13 @@ package settings
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mcuadros/go-version"
-	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/mcuadros/go-version"
+	"go.uber.org/zap"
 )
 
 var (
@@ -20,11 +21,7 @@ const (
 	TITLE_JSON_FILENAME    = "titles.json"
 	VERSIONS_JSON_FILENAME = "versions.json"
 	SLM_VERSION            = "1.4.0"
-	TITLES_JSON_URL        = "https://tinfoil.media/repo/db/titles.json"
-	//TITLES_JSON_URL    = "https://raw.githubusercontent.com/blawar/titledb/master/titles.US.en.json"
-	VERSIONS_JSON_URL = "https://tinfoil.media/repo/db/versions.json"
-	//VERSIONS_JSON_URL = "https://raw.githubusercontent.com/blawar/titledb/master/versions.json"
-	SLM_VERSION_URL = "https://raw.githubusercontent.com/giwty/switch-library-manager/master/slm.json"
+	SLM_VERSION_URL        = "https://raw.githubusercontent.com/giwty/switch-library-manager/master/slm.json"
 )
 
 const (
@@ -48,8 +45,10 @@ type OrganizeOptions struct {
 }
 
 type AppSettings struct {
-	VersionsEtag           string          `json:"versions_etag"`
+	TITLES_JSON_URL        string          `json:"TITLES_JSON_URL"`
 	TitlesEtag             string          `json:"titles_etag"`
+	VERSIONS_JSON_URL      string          `json:"VERSIONS_JSON_URL"`
+	VersionsEtag           string          `json:"versions_etag"`
 	Prodkeys               string          `json:"prod_keys"`
 	Folder                 string          `json:"folder"`
 	ScanFolders            []string        `json:"scan_folders"`
@@ -57,6 +56,7 @@ type AppSettings struct {
 	Debug                  bool            `json:"debug"`
 	CheckForMissingUpdates bool            `json:"check_for_missing_updates"`
 	CheckForMissingDLC     bool            `json:"check_for_missing_dlc"`
+	IgnoreDemos            bool            `json:"ignore_demos"`
 	OrganizeOptions        OrganizeOptions `json:"organize_options"`
 	ScanRecursively        bool            `json:"scan_recursively"`
 	GuiPagingSize          int             `json:"gui_page_size"`
@@ -94,7 +94,9 @@ func ReadSettings(baseFolder string) *AppSettings {
 
 func saveDefaultSettings(baseFolder string) *AppSettings {
 	settingsInstance = &AppSettings{
+		TITLES_JSON_URL:        "https://tinfoil.media/repo/db/titles.json",
 		TitlesEtag:             "W/\"a5b02845cf6bd61:0\"",
+		VERSIONS_JSON_URL:      "https://tinfoil.media/repo/db/versions.json",
 		VersionsEtag:           "W/\"2ef50d1cb6bd61:0\"",
 		Folder:                 "",
 		ScanFolders:            []string{},
@@ -103,6 +105,7 @@ func saveDefaultSettings(baseFolder string) *AppSettings {
 		GuiPagingSize:          100,
 		CheckForMissingUpdates: true,
 		CheckForMissingDLC:     true,
+		IgnoreDemos:            true,
 		ScanRecursively:        true,
 		Debug:                  false,
 		OrganizeOptions: OrganizeOptions{
