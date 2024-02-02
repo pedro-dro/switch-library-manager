@@ -4,6 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/asticode/go-astikit"
 	"github.com/asticode/go-astilectron"
 	bootstrap "github.com/asticode/go-astilectron-bootstrap"
@@ -11,12 +18,6 @@ import (
 	"github.com/giwty/switch-library-manager/process"
 	"github.com/giwty/switch-library-manager/settings"
 	"go.uber.org/zap"
-	"log"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 type Pair struct {
@@ -45,6 +46,7 @@ type LibraryTemplateData struct {
 	Dlc     string `json:"dlc"`
 	TitleId string `json:"titleId"`
 	Path    string `json:"path"`
+	UpdPath string `json:"updpath"`
 	Icon    string `json:"icon"`
 	Update  int    `json:"update"`
 	Region  string `json:"region"`
@@ -224,14 +226,23 @@ func (g *GUI) handleMessage(m *astilectron.EventMessage) interface{} {
 			if v.BaseExist {
 				version := ""
 				name := ""
+
 				if v.File.Metadata.Ncap != nil {
 					version = v.File.Metadata.Ncap.DisplayVersion
 					name = v.File.Metadata.Ncap.TitleName["AmericanEnglish"].Title
+					if name == "" {
+						name = v.File.Metadata.Ncap.TitleName["BritishEnglish"].Title
+						if name == "" {
+							name = v.File.Metadata.Ncap.TitleName["Default"].Title
+						}
+					}
 				}
 
+				var UpdateFilePath string = ""
 				if v.Updates != nil && len(v.Updates) != 0 {
 					if v.Updates[v.LatestUpdate].Metadata.Ncap != nil {
 						version = v.Updates[v.LatestUpdate].Metadata.Ncap.DisplayVersion
+						UpdateFilePath = filepath.Join(v.Updates[v.LatestUpdate].ExtendedInfo.BaseFolder, v.Updates[v.LatestUpdate].ExtendedInfo.FileName)
 					} else {
 						version = ""
 					}
@@ -250,6 +261,7 @@ func (g *GUI) handleMessage(m *astilectron.EventMessage) interface{} {
 							Region:  title.Attributes.Region,
 							Type:    getType(v),
 							Path:    filepath.Join(v.File.ExtendedInfo.BaseFolder, v.File.ExtendedInfo.FileName),
+							UpdPath: UpdateFilePath,
 						})
 				} else {
 					if name == "" {
@@ -262,7 +274,8 @@ func (g *GUI) handleMessage(m *astilectron.EventMessage) interface{} {
 							Version: version,
 							Type:    getType(v),
 							TitleId: v.File.Metadata.TitleId,
-							Path:    v.File.ExtendedInfo.FileName,
+							Path:    filepath.Join(v.File.ExtendedInfo.BaseFolder, v.File.ExtendedInfo.FileName),
+							UpdPath: UpdateFilePath,
 						})
 				}
 
@@ -377,7 +390,7 @@ func (g *GUI) buildSwitchDb() (*db.SwitchTitlesDB, error) {
 	//1. load the titles JSON object
 	g.UpdateProgress(1, 4, "Downloading titles.json")
 	filename := filepath.Join(g.baseFolder, settings.TITLE_JSON_FILENAME)
-	titleFile, titlesEtag, err := db.LoadAndUpdateFile(settings.TITLES_JSON_URL, filename, settingsObj.TitlesEtag)
+	titleFile, titlesEtag, err := db.LoadAndUpdateFile(settingsObj.TITLES_JSON_URL, filename, settingsObj.TitlesEtag)
 	if err != nil {
 		return nil, errors.New("failed to download switch titles [reason:" + err.Error() + "]")
 	}
@@ -385,7 +398,7 @@ func (g *GUI) buildSwitchDb() (*db.SwitchTitlesDB, error) {
 
 	g.UpdateProgress(2, 4, "Downloading versions.json")
 	filename = filepath.Join(g.baseFolder, settings.VERSIONS_JSON_FILENAME)
-	versionsFile, versionsEtag, err := db.LoadAndUpdateFile(settings.VERSIONS_JSON_URL, filename, settingsObj.VersionsEtag)
+	versionsFile, versionsEtag, err := db.LoadAndUpdateFile(settingsObj.VERSIONS_JSON_URL, filename, settingsObj.VersionsEtag)
 	if err != nil {
 		return nil, errors.New("failed to download switch updates [reason:" + err.Error() + "]")
 	}
