@@ -148,6 +148,9 @@ $(function () {
             sendMessage("saveSettings", JSON.stringify(state.settings), scanLocalFolder);
         };
 
+		function uppercaseFormatter(cell, formatterParams, onRendered) {
+			return cell.getValue().toUpperCase();
+		}
 
         function loadTab(target) {
             $(target).show();
@@ -182,7 +185,7 @@ $(function () {
                         paginationSize: state.settings.gui_page_size,
                         data: state.updates,
                         columns: [
-                            {formatter:"rownum"},
+                            {formatter:"rownum", headerSort:false},
                             {field: "Attributes.bannerUrl",download:false,formatter:"image", headerSort:false,formatterParams:{height:"60px", width:"60px"}},
                             {title: "Title", field: "Attributes.name", headerFilter:"input",formatter:"textarea",width:350},
                             {title: "Type", field: "Meta.type", headerFilter:"input"},
@@ -216,9 +219,10 @@ $(function () {
                         paginationSize: state.settings.gui_page_size,
                         data: state.dlc,
                         columns: [
-                            {formatter:"rownum"},
+                            {formatter:"rownum", headerSort:false},
                             {field: "Attributes.bannerUrl",download:false,formatter:"image", headerSort:false,formatterParams:{height:"60px", width:"60px"}},
-                            {title: "Title", field: "Attributes.name", headerFilter:"input",formatter:"textarea",width:350},
+                            {title: "Title", field: "Attributes.name", headerFilter:"input",formatter:"textarea",width:300},
+                            {title: "Title id", field: "Attributes.id", formatter:uppercaseFormatter, headerSort:false, headerFilter:"input", width:170},
                             {title: "# Missing", field: "missing_dlc.length"},
                             {title: "Missing DLC", headerSort:false, field: "missing_dlc",formatter:function(cell, formatterParams, onRendered){
                                     value = ""
@@ -244,7 +248,7 @@ $(function () {
                         paginationSize: state.settings.gui_page_size,
                         data: state.library.issues,
                         columns: [
-                            {formatter:"rownum"},
+                            {formatter:"rownum", headerSort:false},
                             {title: "File name",width:500, headerSort:false, field: "key",formatter:"textarea",cellClick:function(e, cell){
                                     //e - the click event object
                                     //cell - cell component
@@ -279,14 +283,28 @@ $(function () {
                         paginationSize: state.settings.gui_page_size,
                         data: state.library.library_data,
                         columns: [
-                            {formatter:"rownum"},
+                            {formatter:"rownum", headerSort:false},
                             {field: "icon",formatter:"image", download:false,headerSort:false,formatterParams:{height:"60px", width:"60px"}},
                             {title: "Title", field: "name", headerFilter:"input",formatter:"textarea",width:350},
-                            {title: "Title id", headerSort:false, field: "titleId"},
-                            {title: "Region", headerSort:true, field: "region"},
-                            {title: "Type", headerSort:true, field: "type"},
-                            {title: "Update", headerSort:false, field: "update"},
-                            {title: "Version", headerSort:false, field: "version"},
+                            {formatter:uppercaseFormatter, title: "Title id", headerSort:false, field: "titleId", headerFilter:"input", width:170},
+                            {title: "Region", headerSort:true, field: "region", headerFilter:"input"},
+                            {title: "Type", headerSort:true, field: "type", headerFilter:"input"},
+                            {title: "Update", headerSort:false, field: "update",cellClick:function(e, cell){
+                                    //e - the click event object
+                                    //cell - cell component
+									if (event.ctrlKey) {
+										shell.showItemInFolder(cell.getData().updpath)
+									}
+                                }
+                            },
+                            {title: "Version", headerSort:false, field: "version",cellClick:function(e, cell){
+                                    //e - the click event object
+                                    //cell - cell component
+									if (event.ctrlKey) {
+										shell.showItemInFolder(cell.getData().updpath)
+									}
+                                }
+                            },
                             {title: "File name", headerSort:false, field: "path",formatter:"textarea",cellClick:function(e, cell){
                                     //e - the click event object
                                     //cell - cell component
@@ -319,11 +337,11 @@ $(function () {
                         paginationSize: state.settings.gui_page_size,
                         data: state.missingGames,
                         columns: [
-                            {formatter:"rownum"},
+                            {formatter:"rownum", headerSort:false},
                             {field: "icon",download:false,formatter:"image", headerSort:false,formatterParams:{height:"60px", width:"60px"}},
                             {field: "name",title: "Title",  headerFilter:"input",formatter:"textarea",width:350},
-                            {title: "Title id", headerSort:false, field: "titleId"},
-                            {title: "Region", headerSort:true,headerFilter:"input",formatter:"textarea", field: "region"},
+                            {title: "Title id", headerSort:false, field: "titleId", headerFilter:"input", width:170},
+                            {title: "Region", headerSort:true,headerFilter:"input",formatter:"textarea", field: "region", headerFilter:"input"},
                             {title: "Release date", headerSort:true, field: "release_date"},
                         ],
                     });
@@ -338,14 +356,33 @@ $(function () {
         $("body").on("click", ".export-btn", e => {
             let page = currTable.getPage();
             let pageSize = currTable.getPageSize();
-            currTable.setPageSize(true);
+            //currTable.setPageSize(true);
             currTable.setPage(1);
+			currTable.setPageSize(currTable.getDataCount());
             currTable.download("csv", "export.csv");
             currTable.setPageSize(pageSize);
             currTable.setPage(page);
            // currTable && currTable.download("csv", "data.csv");
         });
 
+        $("body").on("click", ".exportdlc-btn", e => {
+			var rows = currTable.getData();
+			var csvContent = "Name,Title id,Missing DLC name, Missing DLC id\n";
+			rows.forEach(function(row) {
+				for (var i = 0; i < row.missing_dlc.length; i++) {
+					csvContent += "\"" + row.Attributes.name + "\",\"" + row.Attributes.id + "\"," +
+								  "\"" + row.missing_dlc[i].substring(0, row.missing_dlc[i].length - 18).trim() + "\"," +
+								  "\"" + row.missing_dlc[i].slice(-17, row.missing_dlc[i].length - 1) + "\"\n";
+				};
+			});
+			var blob = new Blob([csvContent], { type: "text/csv" });
+			var link = document.createElement("a");
+			link.download = "missing_dlc.txt";
+			link.href = URL.createObjectURL(blob);
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+        });
 
         $("body").on("click", ".library-organize-action", e => {
             e.preventDefault();
