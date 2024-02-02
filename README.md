@@ -1,75 +1,31 @@
-# Switch library manager
-Easily manage your switch game backups
+Fork of [Switch Library Manager](https://github.com/giwty/switch-library-manager) created by giwty
 
-![Image description](https://raw.githubusercontent.com/giwty/nsp-update/master/updates_ui.png)
+[CHANGES]
+TITLES_JSON_URL and VERSIONS_JSON_URL now are configurable in settings.json
+TitleID in library tab is upper case now
+Corrected button from "export to scv" to "export to CSV"
+"Updates" tab now is "Missing updates"
+"DLC" tab now is "Missing DLC"
 
-![Image description](https://raw.githubusercontent.com/giwty/nsp-update/master/dlc_ui.png)
- 
-![Image description](https://raw.githubusercontent.com/giwty/nsp-update/master/cmd.png)
+[FIXES]
+New keys are now well calculated
+First 13 ID hexadecimal chars are used to get title information insted of 12. It caused "Duplicate game base" on games with the same first ID 12 hexadecimal chars
+File names starting with a dot ('.') now are accepted
+Last title row is now exported
 
-#### Features:
-- Cross platform, works on Windows / Mac / Linux
-- GUI and command line interfaces 
-- Scan your local switch backup library (NSP/NSZ/XCI)
-- Read titleId/version by decrypting NSP/XCI/NSZ (requires prod.keys)
-- If no prod.keys present, fallback to read titleId/version by parsing file name  (example: `Super Mario Odyssey [0100000000010000][v0].nsp`).
-- Lists missing update files (for games and DLC)
-- Lists missing DLCs
-- Automatically organize games per folder
-- Rename files based on metadata read from NSP
-- Delete old update files (in case you have multiple update files for the same game, only the latest will remain)
-- Delete empty folders
-- Zero dependencies, all crypto operations implemented in Go. 
+[IMPROVEMENTS]
+Added "ignore_demos" option in 'settings.json' . All titles with field "isDemo" set to true in "titles.json" are ignored
+Added "blacklist.json" support. If present, all titles/dlc in this file are ignored. Ideal to avoid those games you'll never want in your list. Fields -> "Id" (mandatory), "Name", "Region", "Reason"
+Added "whitelist.json" support. If present, all content included in this file is always listed. Ideal to add cart only games, homebrew or to redefine an already existing title listed in 'titles.json'. File struct the same 'titles.json' but only ID is mandator
+Added TITLEID, REGION and TYPE filter to "LIBRARY" tab
+Added TITLEID and REGION filter to "MISSING GAMES" tab
+Added TITLEID filter to "MISSING DLC" tab
+Added direct access to file update if exists. Just press CONTROL key on keyboard and then click on UPDATE or VERSION value
+New export method in MISSING DLC tab. Now creates a row for every missing dlc. The old method is also kept but has been renamed to "export to CSV (compact)"
 
-## Keys (optional)
-Having a prod.keys file will allow you to ensure the files you have a correctly classified.
-The app will look for the "prod.keys" file in the app folder or under ${HOME}/.switch/
-You can also specify a custom location in the settings.json (see below)
+[KNOWN ISSUES]
+Download 'titles.json' and 'versions.json' from tinfoil not working. Get an x509 certificate error. Tried to solve it accepting all certificates, but I get an 404 - NOT FOUND error. I recommed to download them manually or change TITLES_JSON_URL and VERSIONS_JSON_URL
 
-Note: Only the header_key, and the key_area_key_application_XX keys are required.
-
-## Settings  
-During the App first launch a "settings.json" file will be created, that allows for granular control over the Apps execution.
-
-You can customize the folder/file re-naming, as well as turn on/off features.
-
-```
-{
- "versions_etag": "W/\"c3f5ecb3392d61:0\"",
- "titles_etag": "W/\"4a4fcc163a92d61:0\"",
- "prod_keys": "",
- "folder": "",
- "scan_folders": [],
- "gui": false,
- "debug": false, # Deprecated, no longer works
- "check_for_missing_updates": true,
- "check_for_missing_dlc": true,
- "organize_options": {
-  "create_folder_per_game": false,
-  "rename_files": false,
-  "delete_empty_folders": false,
-  "delete_old_update_files": false,
-  "folder_name_template": "{TITLE_NAME}",
-  "switch_safe_file_names": true,
-  "file_name_template": "{TITLE_NAME} ({DLC_NAME})[{TITLE_ID}][v{VERSION}]"
- },
- "scan_recursively": true,
- "gui_page_size": 100
-}
-```
-
-## Naming template
-The following template elements are supported:
-- {TITLE_NAME} - game name
-- {TITLE_ID} - title id
-- {VERSION} - version id (only applicable to files)
-- {VERSION_TXT} - version number (like 1.0.0) (only applicable to files)
-- {REGION} - region
-- {TYPE} - impacts DLCs/updates, will appear as ["UPD","DLC"]
-- {DLC_NAME} - DLC name (only applicable to DLCs)
-
-## Reporting issues
-Please set debug mode to 'true', and attach the slm.log to allow for quicker resolution.
 
 ## Usage
 ##### Windows
@@ -105,4 +61,5 @@ Please set debug mode to 'true', and attach the slm.log to allow for quicker res
 - Binaries will be available under output
 
 #### Thanks
+To giwty for his great job
 This program relies on [blawar's titledb](https://github.com/blawar/titledb), to get the latest titles and versions.
