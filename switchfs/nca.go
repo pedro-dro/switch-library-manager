@@ -7,9 +7,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
+
 	"github.com/giwty/switch-library-manager/settings"
 	"github.com/giwty/switch-library-manager/switchfs/_crypto"
-	"io"
 )
 
 const (
@@ -108,7 +109,7 @@ func decryptAesCtr(ncaHeader *ncaHeader, fsHeader *fsHeader, offset uint32, size
 
 	keys, _ := settings.SwitchKeys()
 
-	keyName := fmt.Sprintf("key_area_key_application_0%x", keyRevision)
+	keyName := fmt.Sprintf("key_area_key_application_%0*x", 2, keyRevision)
 	KeyString := keys.GetKey(keyName)
 	if KeyString == "" {
 		return nil, errors.New(fmt.Sprintf("missing Key_area_key[%v]", keyName))
