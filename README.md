@@ -53,7 +53,7 @@ Fork of [Switch Library Manager](https://github.com/giwty/switch-library-manager
 
 ## Building
 - Install and setup Go
-- Clone the repo: `git clone https://github.com/giwty/switch-library-manager.git`
+- Clone the repo: `git clone https://github.com/pedro-dro/switch-library-manager.git`
 - Get the bundler `go get -u github.com/asticode/go-astilectron-bundler/...`
 - Install bundler `go install github.com/asticode/go-astilectron-bundler/astilectron-bundler`
 - Copy bundler binary to the source folder `cd switch-library-manager` and then `mv $HOME/go/bin/astilectron-bundler .`
@@ -61,5 +61,5 @@ Fork of [Switch Library Manager](https://github.com/giwty/switch-library-manager
 - Binaries will be available under output
 
 #### Thanks
-To giwty for his great job
-This program relies on [blawar's titledb](https://github.com/blawar/titledb), to get the latest titles and versions.
+- To @giwty for his great job
+- This program relies on [blawar's titledb](https://github.com/blawar/titledb), to get the latest titles and versions.
